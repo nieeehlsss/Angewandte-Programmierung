@@ -14,3 +14,4 @@ def greet_name(name: str):
 def calculate(number: float):
     result = number * 2 + 5
     return {"message": f"Der verrechnete Wert von {number} ist {result}"}
+
