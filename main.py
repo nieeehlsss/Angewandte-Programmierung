@@ -165,7 +165,7 @@ def get_notes_stats():
     ]
 
     unique_tags_count = len(tag_counts)
-    
+
     return {
         "total_notes": len(notes_db),
         "by_category": categories,
@@ -280,4 +280,33 @@ def get_notes_by_tag(tag_name: str) -> list[Note]:
     
     return filtered
 
+
+# GET Endpoint um alle einzigartigen Kategorien aus allen Notizen zu bekommen
+@app.get("/categories")
+def list_categories() -> list[str]:
+    """Get all unique categories from all notes"""
+    notes_db, _ = load_notes()
+    
+    # Collect all categories
+    all_categories = set()
+    for note in notes_db:
+        all_categories.add(note.category)
+    
+    # Return sorted list
+    return sorted(list(all_categories))
+
+
+# GET Endpoint um alle Notizen einer bestimmten Kategorie zu bekommen
+@app.get("/categories/{category_name}/notes")
+def get_notes_by_category(category_name: str) -> list[Note]:
+    """Get all notes in a specific category"""
+    notes_db, _ = load_notes()
+    
+    # Filter notes by category
+    filtered = []
+    for note in notes_db:
+        if note.category == category_name:
+            filtered.append(note)
+    
+    return filtered
 
