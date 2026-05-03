@@ -149,18 +149,28 @@ def get_notes_by_category(category: str):
 def get_notes_stats():
     """Get statistics about notes"""
     notes_db, _ = load_notes()
-
-    # Count by category
+    # Count by category and tags
     categories = {}
+    tag_counts = {}
+
     for note in notes_db:
-        if note.category in categories:
-            categories[note.category] += 1
-        else:
-            categories[note.category] = 1
+        categories[note.category] = categories.get(note.category, 0) + 1
+        for tag in getattr(note, "tags", []) or []:
+            tag_counts[tag] = tag_counts.get(tag, 0) + 1
+
+    # Build top_tags list as list of {"tag": tag, "count": count}, sorted desc
+    top_tags = [
+        {"tag": tag, "count": count}
+        for tag, count in sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    unique_tags_count = len(tag_counts)
     
     return {
         "total_notes": len(notes_db),
-        "by_category": categories
+        "by_category": categories,
+        "top_tags": top_tags,
+        "unique_tags_count": unique_tags_count
     }
 
 
