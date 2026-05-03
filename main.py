@@ -10,10 +10,14 @@ from typing import Optional
 from typing import Annotated
 from fastapi import Depends
 
+# Main application implementing a notes API backed by SQLModel (SQLite).
+# Contains models, DB setup, and FastAPI endpoints for CRUD and stats.
+
 class NoteTag(SQLModel, table=True):
     __tablename__ = "note_tag"
     note_id: Optional[int] = Field(default=None, foreign_key="notes.id", primary_key=True)
     tag_id: Optional[int] = Field(default=None, foreign_key="tags.id", primary_key=True)
+    # Association table for many-to-many Note <-> Tag relationship
 
 
 class Note(SQLModel, table=True):
@@ -27,6 +31,7 @@ class Note(SQLModel, table=True):
     
     # Many-to-many relationship with Tag via NoteTag association table
     tags: list["Tag"] = Relationship(back_populates="notes", link_model=NoteTag)
+    # `tags` will hold Tag objects linked through NoteTag
 
 class Tag(SQLModel, table=True):
     __tablename__ = 'tags'
@@ -36,17 +41,20 @@ class Tag(SQLModel, table=True):
     
     # Many-to-many relationship with Note (implicit link table)
     notes: list[Note] = Relationship(back_populates="tags", link_model=NoteTag)
+    # `notes` will be populated with Note objects linked to this tag
 
 # Create database engine
 engine = create_engine("sqlite:///notes.db")
 
-# Create tables (Note, Tag, and link table)
+# Create DB tables if they do not exist yet: notes, tags, note_tag
 SQLModel.metadata.create_all(engine)
 
 def get_session():
     """Create a new database session for each request"""
     with Session(engine) as session:
         yield session
+
+# Dependency type alias for request handlers
 
 # Type alias for cleaner code
 SessionDep = Annotated[Session, Depends(get_session)]
@@ -59,15 +67,18 @@ app = FastAPI(
 
 @app.get("/")
 def root():
+    # Simple health/root endpoint
     return {"message": "Hello, World!"}
 
 @app.get("/name/{name}")
 def greet_name(name: str):
+    # Echo endpoint with a path parameter
     return {"message": f"Hello, {name}!"}
 
 @app.get("/calculate/{number}")
 def calculate(number: float):
     result = number * 2 + 5
+    # Example calculation endpoint returning localized message
     return {"message": f"Der verrechnete Wert von {number} ist {result}"}
 
 
@@ -81,6 +92,7 @@ class NoteCreate(BaseModel):
     content: str
     category: str
     tags: list[str] = []
+    # Input model for creating/updating notes (tags as list of names)
 
 # API Output model
 class NoteResponse(BaseModel):
@@ -93,6 +105,7 @@ class NoteResponse(BaseModel):
     
     class Config:
         from_attributes = True
+    # Output model for API responses (serializes DB attributes)
 
 
 class FileNote(BaseModel):
@@ -110,6 +123,7 @@ def load_notes():
     notes_db = []
     note_id_counter = 1
 
+    # If a JSON file exists (legacy), load FileNote entries for file-backed endpoints
     if NOTES_FILE.exists():
         with open(NOTES_FILE, 'r') as f:
             data = json.load(f)
@@ -118,6 +132,7 @@ def load_notes():
                 if 'tags' not in note_dict:
                     note_dict['tags'] = []
 
+            # Parse file-backed notes into FileNote Pydantic models
             notes_db = [FileNote(**note_dict) for note_dict in data]
 
             # Set counter to max ID + 1
@@ -133,7 +148,7 @@ def save_notes(notes_db):
     NOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     with open(NOTES_FILE, 'w') as f:
-        # Convert FileNote objects to dicts
+        # Convert FileNote objects to dicts and write JSON
         notes_data = [note.dict() for note in notes_db]
         json.dump(notes_data, f, indent=2)
 
@@ -142,7 +157,7 @@ def save_notes(notes_db):
 def create_note(note: NoteCreate, session: SessionDep) -> NoteResponse:
     """Create a new note in database"""
     
-    # Create note
+    # Create new Note DB object (will get an id after commit)
     db_note = Note(
         title=note.title,
         content=note.content,
@@ -153,6 +168,7 @@ def create_note(note: NoteCreate, session: SessionDep) -> NoteResponse:
     tag_objects = []
     seen_tags = set()
     
+    # Normalize and deduplicate tag names, find or create Tag rows
     for tag_name in note.tags:
         tag_name_lower = tag_name.lower().strip()
         if not tag_name_lower or tag_name_lower in seen_tags:
@@ -171,6 +187,7 @@ def create_note(note: NoteCreate, session: SessionDep) -> NoteResponse:
             session.add(new_tag)
             tag_objects.append(new_tag)
     
+    # Attach Tag objects to the Note relationship
     db_note.tags = tag_objects
     
     session.add(db_note)
@@ -196,7 +213,7 @@ def list_notes(
 ) -> list[NoteResponse]:
     """List notes with filters"""
     
-    # Build query
+    # Build base query for notes
     statement = select(Note)
     
     # Apply filters
@@ -216,10 +233,10 @@ def list_notes(
         tag_lower = tag.lower()
         statement = statement.join(Note.tags).where(Tag.name == tag_lower)
     
-    # Execute query
+    # Execute query and return NoteResponse objects
     notes = session.exec(statement).all()
     
-    # Convert to response models
+    # Convert DB Note objects to API response models
     return [
         NoteResponse(
             id=n.id,
@@ -253,12 +270,14 @@ def get_notes_by_category(category: str, session: SessionDep) -> list[NoteRespon
 @app.get("/notes/stats")
 def get_notes_stats(session: SessionDep):
     """Get statistics about notes (queries SQL database)."""
+    # Load all notes including their tags via relationships
     notes = session.exec(select(Note)).all()
 
     # Count by category and tags
     categories: dict[str, int] = {}
     tag_counts: dict[str, int] = {}
 
+    # Aggregate category counts and tag counts
     for note in notes:
         categories[note.category] = categories.get(note.category, 0) + 1
         for tag in getattr(note, "tags", []) or []:
@@ -330,7 +349,7 @@ def update_note(note_id: int, note_update: NoteCreate, session: SessionDep) -> N
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    # Update note fields
+    # Update note fields (handle tags specially)
     update_data = note_update.dict(exclude_unset=True)
 
     # Handle tags specially: convert tag names to Tag objects

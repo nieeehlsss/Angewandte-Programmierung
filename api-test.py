@@ -3,6 +3,9 @@ import random
 
 URL = "http://127.0.0.1:8000/"
 
+# Small integration test script for the Note Taking API.
+# Each function posts/gets against the running FastAPI server.
+
 
 '''
 50 TEST NOTES ERSTELLEN
@@ -29,6 +32,16 @@ def test_create_50_notes():
     print(f"Created {success}/50 notes successfully")
 
 
+def test_get_root():
+    """Check root endpoint returns 200."""
+    response = requests.get(URL)
+    response.status_code == 200
+    if response.status_code == 200:
+        print("GET / - Success")
+    else:
+        print("GET / - Failed")
+
+
 """
 TESTS DER EINZELNEN ENDPOINTS
 """
@@ -42,6 +55,7 @@ def test_get_root():
         print("GET / - Failed")
 
 def test_create_notes():
+    # Create a few sample notes with fixed payloads
     for i in range(5):
         payload = {
             "title": f"Test Note {i}",
@@ -63,6 +77,7 @@ def test_post_creation():
         "category": "Test",
         "tags": ["tag1", "tag2"]
     }
+    # Post a single note and verify title in response
     response = requests.post(URL + "notes/", json=payload)
     if response.status_code == 201:
         print("POST /notes - Success")
@@ -77,6 +92,7 @@ def test_post_creation():
 
 
 def test_greet_name():
+    # Test the name greeting endpoint
     name = "Alice"
     response = requests.get(URL + f"name/{name}")
     if response.status_code == 200 and response.json().get("message") == f"Hello, {name}!":
@@ -86,6 +102,7 @@ def test_greet_name():
 
 
 def test_calculate():
+    # Test the calculation endpoint and check the expected value appears
     number = 3.5
     expected = number * 2 + 5
     response = requests.get(URL + f"calculate/{number}")
@@ -96,6 +113,7 @@ def test_calculate():
 
 
 def test_list_notes():
+    # Retrieve list of notes (DB-backed)
     response = requests.get(URL + "notes/")
     if response.status_code == 200 and isinstance(response.json(), list):
         print(f"GET /notes - Success ({len(response.json())} notes)")
@@ -104,6 +122,7 @@ def test_list_notes():
 
 
 def test_get_notes_by_category():
+    # Retrieve notes filtered by category
     category = "Test"
     response = requests.get(URL + f"notes/category/{category}")
     if response.status_code == 200 and isinstance(response.json(), list):
@@ -113,6 +132,7 @@ def test_get_notes_by_category():
 
 
 def test_get_notes_stats():
+    # Request aggregated stats (total, by_category, top_tags)
     response = requests.get(URL + "notes/stats")
     if response.status_code == 200 and "total_notes" in response.json():
         print("GET /notes/stats - Success")
@@ -121,6 +141,7 @@ def test_get_notes_stats():
 
 
 def test_create_get_delete_note():
+    # Create a temp note, then GET it and DELETE it to verify lifecycle
     payload = {
         "title": "Temp Note",
         "content": "Temporary note for testing get/delete.",
@@ -152,6 +173,7 @@ def test_create_get_delete_note():
 
 
 def test_query_parameters():
+    # Test query parameter endpoint that filters a static name list
     params = {"param1": "A", "param2": 2}
     response = requests.get(URL + "queryparameters", params=params)
     if response.status_code == 200 and "namen" in response.json():
