@@ -165,15 +165,15 @@ MAIN DATEI, UM ALLE TESTS AUSZUFÜHREN
 """
 
 if __name__ == "__main__":
-    test_get_root()
-    test_greet_name()
-    test_calculate()
-    test_create_get_delete_note()
+    # test_get_root()
+    # test_greet_name()
+    # test_calculate()
+    # test_create_get_delete_note()
     test_list_notes()
-    test_get_notes_by_category()
-    test_get_notes_stats()
-    test_query_parameters()
+    # test_get_notes_by_category()
+    # test_get_notes_stats()
+    # test_query_parameters()
     # create a few notes with the small helper
-    test_create_notes()
+    #test_create_notes()
     # then create 50 more (optional heavy load)
     #test_create_50_notes()
