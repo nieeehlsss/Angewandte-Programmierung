@@ -100,7 +100,9 @@ def create_note(note: NoteCreate) -> Note:
 def list_notes(
     category: str = None,
     search: str = None,
-    tag: str = None
+    tag: str = None,
+    created_after: str = None,
+    created_before: str = None
 ) -> list[Note]:
     """
     List notes with optional filters
@@ -129,7 +131,41 @@ def list_notes(
         # Filter by tag
         if tag and tag not in note.tags:
             continue
-        
+
+        # Filter by created_after
+        if created_after:
+            try:
+                created_after_dt = datetime.fromisoformat(created_after)
+                # assume UTC if client provided no timezone
+                if created_after_dt.tzinfo is None:
+                    created_after_dt = created_after_dt.replace(tzinfo=timezone.utc)
+
+                created_at_dt = datetime.fromisoformat(note.created_at)
+                if created_at_dt.tzinfo is None:
+                    created_at_dt = created_at_dt.replace(tzinfo=timezone.utc)
+
+                if created_at_dt < created_after_dt:
+                    continue
+            except ValueError:
+                pass
+
+        # Filter by created_before
+        if created_before:
+            try:
+                created_before_dt = datetime.fromisoformat(created_before)
+                # assume UTC if client provided no timezone
+                if created_before_dt.tzinfo is None:
+                    created_before_dt = created_before_dt.replace(tzinfo=timezone.utc)
+
+                created_at_dt = datetime.fromisoformat(note.created_at)
+                if created_at_dt.tzinfo is None:
+                    created_at_dt = created_at_dt.replace(tzinfo=timezone.utc)
+
+                if created_at_dt > created_before_dt:
+                    continue
+            except ValueError:
+                pass
+
         filtered.append(note)
     
     return filtered
@@ -346,3 +382,6 @@ def partial_update_note(note_id: int, note_update: NoteUpdate) -> Note:
             return note
     
     raise HTTPException(status_code=404, detail="Note not found")
+
+
+######
