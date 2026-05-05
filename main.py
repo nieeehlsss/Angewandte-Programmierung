@@ -1,12 +1,10 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from pydantic import BaseModel
 from datetime import datetime, timezone
 import json
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Annotated
 from sqlmodel import SQLModel, Field, Session, col, create_engine, Relationship, or_, select
-from typing import Annotated
-from fastapi import Depends
 
 # Main application implementing a notes API backed by SQLModel (SQLite).
 # Contains models, DB setup, and FastAPI endpoints for CRUD and stats.
@@ -488,7 +486,7 @@ def partial_update_note(note_id: int, note_update: NoteUpdate, session: SessionD
         raise HTTPException(status_code=404, detail="Note not found")
 
     # Update only provided fields
-    update_data = note_update.dict(exclude_unset=True)
+    update_data = note_update.model_dump(exclude_unset=True)
 
     # Handle tags specially: convert tag names to Tag objects
     if "tags" in update_data:

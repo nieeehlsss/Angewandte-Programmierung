@@ -55,5 +55,3 @@ Fehlerbehebung
 
 Weiteres
 - `work-log.md` im Repo enthält Notizen zu den täglichen Tasks und Problemen während der Implementierung.
-
-Wenn du möchtest, kann ich eine `requirements.txt` generieren oder die Readme noch ausführlicher mit Beispiel-Requests befüllen.
