@@ -141,6 +141,7 @@ _Explain how you overcame the challenges or what help you needed._
 - Ich habe die Modelle und Migration/Erstellungsschritte überprüft und eine explizite Association-Tabelle (`NoteTag`) mit ForeignKey-Feldern ergänzt, damit die Many-to-Many-Relation korrekt modelliert wird.
 - Die Endpunkte wurden schrittweise angepasst: Tag-Namen werden jetzt normalisiert und beim Erstellen/Aktualisieren in `Tag`-Objekte überführt (get-or-create), bevor sie der `Note.tags`-Beziehung zugewiesen werden.
 - Die `api-test.py` half beim schnellen Verifizieren; zusätzlich hat mir ein KI-Assistent Vorschläge geliefert, aber ich musste die Vorschläge verstehen und gezielt im Code prüfen/umsetzen.
+- Als KI meiner Wahl habe ich Github Copilot benutzt, da man diesen direkt in VS Code benutzen kann und der größte Vorteil ist, dass er den Kontext meiner Frage kennt, weil er sich den gesamten Code anschauen kann. Würde ich nur eine Stelle in ChatGPT kopieren, fehlt ihm komplett der Kontext zum richtigen bearbeiten.
 
 
 
@@ -153,7 +154,10 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 1. ✅ What did I accomplish?
 
-
+- Ich habe ein eigenes Test-Set für die Notes API aufgebaut und dafür die wichtigsten Endpunkte mit `requests` überprüft.
+- Dabei habe ich Tests für das Erstellen, Lesen, Aktualisieren und Löschen von Notizen geschrieben.
+- Zusätzlich habe ich Filterfunktionen sowie Fehlerfälle wie fehlende Felder oder nicht vorhandene IDs mit abgedeckt.
+- Einen besonderen Fokus habe ich auf die Funktionen aus den vorherigen Tagen gelegt, also auf CRUD, Filterung, Statistik und Partial Updates.
 
 
 
@@ -162,7 +166,9 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 2. 🚧 What challenges did I face?
 
-
+- Zu Beginn war nicht immer klar, welche Antwortcodes ich bei den einzelnen Tests erwarten sollte, besonders bei `422`, `404` und `201`.
+- Teilweise war es schwierig, saubere Testdaten zu erzeugen, ohne dass sich die einzelnen Tests gegenseitig beeinflussen.
+- Außerdem musste ich erst herausfinden, wie ich die laufende API zuverlässig gegen die Tests prüfe, ohne mich nur auf die manuelle Kontrolle in `/docs` zu verlassen.
 
 
 
@@ -171,7 +177,9 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 3. 💡 How did I overcome them?
 
-
+- Ich habe mich an der Aufgabenstruktur aus der Präsentation orientiert und die Tests Schritt für Schritt aufgebaut: erst CRUD, dann Filter, dann Fehlerfälle.
+- Mit gezielten Beispielanfragen konnte ich schnell prüfen, ob die API die erwarteten Statuscodes und Rückgaben liefert.
+- Durch wiederholtes Ausführen der Testdatei habe ich die Ergebnisse verglichen und die Fälle so angepasst, dass sie reproduzierbar und unabhängig voneinander funktionieren.
 
 
 
