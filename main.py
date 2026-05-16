@@ -1,11 +1,10 @@
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel, Field, field_validator, model_validator, HttpUrl, PositiveInt, ConfigDict
+from pydantic import BaseModel, Field, field_validator, model_validator, HttpUrl, PositiveInt, ConfigDict, EmailStr
 from datetime import datetime, timezone
 import json
 from pathlib import Path
 from typing import Optional, Annotated
 from sqlmodel import SQLModel, Field, Session, col, create_engine, Relationship, or_, select
-from email_validator import EmailStr
 # Main application implementing a notes API backed by SQLModel (SQLite).
 # Contains models, DB setup, and FastAPI endpoints for CRUD and stats.
 
@@ -38,7 +37,10 @@ class Tag(SQLModel, table=True):
     @field_validator("name")
     @classmethod
     def normalize_name(cls, value: str) -> str:
-        return value.strip().lower()
+        normalized = value.strip().lower()
+        if value != normalized:
+            raise ValueError("tag name must be lowercase and trimmed")
+        return normalized
     
     # Many-to-many relationship with Note (implicit link table)
     notes: list[Note] = Relationship(back_populates="tags", link_model=NoteTag)
@@ -94,15 +96,13 @@ class NoteCreate(BaseModel):
     title: str = Field(
     min_length=3,
     max_length=100,
-    description="Short note title shown in lists",
-    examples=["Shopping list", "Meeting prep"]
+    description="Short note title shown in lists"
     )
     content: str = Field(min_length=1, max_length=10_000)
     category: str = Field(
     min_length=2, 
     max_length=30,
-    description="Lowercase category, e.g. work, personal, school",
-    examples=["work"]
+    description="Lowercase category, e.g. work, personal, school"
     )
     @field_validator("category")
     @classmethod
@@ -144,15 +144,14 @@ class NoteCreate(BaseModel):
 
 # API Output model
 class NoteResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     title: str
     content: str
     category: str
     tags: list[str]
     created_at: str
-    
-    class Config:
-        from_attributes = True
     # Output model for API responses (serializes DB attributes)
 
 
