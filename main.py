@@ -515,9 +515,13 @@ def get_notes_by_category(category_name: str, session: SessionDep) -> list[NoteR
 # Add PATCH ENDPOINT um nur bestimmte Felder einer Note zu aktualisieren
 
 class NoteUpdate(BaseModel):
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+    )
+
     title: str | None = Field(default=None, min_length=3, max_length=100)
-    content: str | None = Field(default=None, min_length=1)
-    category: str | None = None
+    content: str | None = Field(default=None, min_length=1, max_length=10_000)
+    category: str | None = Field(default=None, min_length=2, max_length=30)
     tags: list[str] | None = Field(default=None, max_length=10)
 
 @app.patch("/notes/{note_id}")
