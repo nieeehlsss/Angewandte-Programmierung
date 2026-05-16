@@ -191,6 +191,11 @@ _Explain how you overcame the challenges or what help you needed._
 #### 1. ✅ What did I accomplish?
 
 
+- Ich habe strenge Pydantic-Schemas eingeführt und mit `NoteCreate` und `NoteUpdate` klare Eingabe-Contracts definiert; unbekannte Felder werden jetzt mit `extra="forbid"` abgewiesen.
+- Felder wurden validiert und normalisiert: Längenlimits für Titel und Content, whitespace-Trim (strip) und Normalisierung von Kategorien und Tags (z. B. `lower()`).
+- Eine Cross-Field-Validierung stellt sicher, dass Notizen mit `category == "work"` mindestens das Tag `work` enthalten müssen.
+- Für Tags habe ich die erlaubten Zeichen per Regulär-Ausdruck (z. B. `^[a-z0-9-]+$`) durchgesetzt — die Prüfung läuft in einem Validator, um Kompatibilitätsprobleme mit `Field(pattern=...)` zu vermeiden.
+- Zur Absicherung wurde `validate_assignment=True` aktiviert und eine kleine Testdatei `test_validation.py` mit 8 Testfällen erstellt, die die neuen Regeln automatisiert überprüft.
 
 
 
@@ -200,6 +205,9 @@ _Explain how you overcame the challenges or what help you needed._
 #### 2. 🚧 What challenges did I face?
 
 
+- Der statische Endpunkt `/notes/stats` wurde anfänglich von FastAPI als variabler Pfad (`/notes/{note_id}`) interpretiert, was zu Validierungsfehlern (422) führte.
+- Ein Versuch, `pattern` direkt in `Field(...)` für SQLModel-Felder zu nutzen, löste einen `TypeError`, da das Argument dort nicht durchgereicht wurde.
+- Beim Anlegen des neuen `Tag`-Schemas fehlte zunächst ein Primärschlüssel, wodurch die App beim Start mit Schema-Fehlern abbrach.
 
 
 
@@ -209,6 +217,10 @@ _Explain how you overcame the challenges or what help you needed._
 #### 3. 💡 How did I overcome them?
 
 
+- Ich habe die Routenreihenfolge in `main.py` so angepasst, dass feste Pfade (z. B. `/notes/stats`) vor variablen Pfaden stehen, wodurch Routing-Konflikte entfielen.
+- Die Regex-Validierung wurde in einen `field_validator` ausgelagert (mit dem `re`-Modul), um die `Field(pattern=...)`-Inkompatibilität zu umgehen.
+- Den fehlenden Primärschlüssel im `Tag`-Modell habe ich ergänzt und das Schema mit `validate_assignment=True` konfiguriert, sodass auch nachträgliche Änderungen geprüft werden.
+- Die `test_validation.py` automatisiert die Prüfungen, so sind die neuen Validierungsregeln schnell und reproduzierbar verifizierbar.
 
 
 
