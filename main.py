@@ -1,11 +1,11 @@
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator, HttpUrl, PositiveInt, ConfigDict
 from datetime import datetime, timezone
 import json
 from pathlib import Path
 from typing import Optional, Annotated
 from sqlmodel import SQLModel, Field, Session, col, create_engine, Relationship, or_, select
-
+from email_validator import EmailStr
 # Main application implementing a notes API backed by SQLModel (SQLite).
 # Contains models, DB setup, and FastAPI endpoints for CRUD and stats.
 
@@ -78,16 +78,54 @@ def calculate(number: float):
     return {"message": f"Der verrechnete Wert von {number} ist {result}"}
 
 
-####################################
-### Note API Endpoints (Day 2)
-####################################
+ALLOWED_CATEGORIES = {"work", "personal", "school", "ideas", "general"}
 
 # API Input model
 class NoteCreate(BaseModel):
-    title: str
-    content: str
-    category: str
-    tags: list[str] = []
+    model_config = ConfigDict(
+    str_strip_whitespace=True,   # auto-strip all str fields
+    extra="forbid",              # reject unknown fields    
+    )
+    title: str = Field(
+    min_length=3,
+    max_length=100,
+    description="Short note title shown in lists",
+    examples=["Shopping list", "Meeting prep"]
+    )
+    content: str = Field(min_length=1, max_length=10_000)
+    category: str = Field(
+    min_length=2, 
+    max_length=30,
+    description="Lowercase category, e.g. work, personal, school",
+    examples=["work"]
+    )
+    @field_validator("category")
+    @classmethod
+    def category_must_be_known(cls, value: str) -> str:
+        if value not in ALLOWED_CATEGORIES:
+            raise ValueError(
+                f"category must be one of {sorted(ALLOWED_CATEGORIES)}"
+            )
+        return value
+    
+    author_email: EmailStr
+    
+    tags: list[str] = Field(default_factory=list, max_length=10)
+
+    @field_validator("tags")
+    @classmethod
+    def clean_tags(cls, raw: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for tag in raw:
+            t = tag.strip().lower()
+            if not t:
+                raise ValueError("tags must not be empty strings")
+            if t in seen:
+                continue           # silently drop duplicates
+            seen.add(t)
+            cleaned.append(t)
+        return cleaned
     # Input model for creating/updating notes (tags as list of names)
 
 # API Output model
@@ -468,10 +506,10 @@ def get_notes_by_category(category_name: str, session: SessionDep) -> list[NoteR
 # Add PATCH ENDPOINT um nur bestimmte Felder einer Note zu aktualisieren
 
 class NoteUpdate(BaseModel):
-    title: Optional[str] = None
-    content: Optional[str] = None
-    category: Optional[str] = None
-    tags: Optional[list[str]] = None
+    title: str | None = Field(default=None, min_length=3, max_length=100)
+    content: str | None = Field(default=None, min_length=1)
+    category: str | None = None
+    tags: list[str] | None = Field(default=None, max_length=10)
 
 @app.patch("/notes/{note_id}")
 def partial_update_note(note_id: int, note_update: NoteUpdate, session: SessionDep) -> NoteResponse:
