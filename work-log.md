@@ -313,7 +313,10 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 1. ✅ What did I accomplish?
 
-
+- Ich habe das Repository noch einmal aufgeräumt und die Projektstruktur übersichtlicher gemacht, damit Backend, Frontend, Tests und Präsentation klar voneinander getrennt sind.
+- Außerdem habe ich die README.md überarbeitet bzw. ausgebaut, sodass Installation, Nutzung und die wichtigsten technischen Bestandteile des Projekts verständlich dokumentiert sind.
+- Dabei habe ich vor allem die Arbeit mit FastAPI, SQLModel und Streamlit sauber zusammengefasst und die wichtigsten Startschritte in einer klaren Form beschrieben.
+- Zusätzlich habe ich das Worklog sprachlich und strukturell geglättet, damit die Einträge einheitlicher wirken und sich der Verlauf des Projekts besser nachvollziehen lässt.
 
 
 
@@ -322,7 +325,9 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 2. 🚧 What challenges did I face?
 
-
+- Es war nicht immer leicht, die Dokumentation so zu formulieren, dass sie sowohl ordentlich als auch verständlich bleibt und nicht zu lang wird.
+- Die technischen Teile des Projekts auf den Punkt zu bringen war anspruchsvoll, weil in der Lösung mehrere Themen zusammenkommen, zum Beispiel Backend-API, Datenbank und Frontend.
+- Beim Überarbeiten des Worklogs musste ich darauf achten, die alten Inhalte nicht zu verfälschen, sondern sie nur sauberer und einheitlicher zu formulieren.
 
 
 
@@ -331,7 +336,9 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 3. 💡 How did I overcome them?
 
-
+- Ich habe die Dokumentation klar gegliedert und mit übersichtlichen Abschnitten gearbeitet, damit Einstieg, Nutzung und Projektaufbau schnell verständlich sind.
+- Für die Beschreibung der technischen Inhalte habe ich die wichtigsten Punkte zusammengezogen und mich auf das konzentriert, was im Projekt wirklich umgesetzt wurde.
+- Das Worklog habe ich Schritt für Schritt sprachlich überarbeitet, ohne den eigentlichen Inhalt zu verändern, damit es am Ende einheitlich und sauber wirkt.
 
 
 
