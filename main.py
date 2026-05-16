@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, Response
 from pydantic import BaseModel, Field, field_validator, model_validator, HttpUrl, PositiveInt, ConfigDict, EmailStr
 from datetime import datetime, timezone
 import json
@@ -30,7 +30,6 @@ class Note(SQLModel, table=True):
 
 class Tag(SQLModel, table=True):
     __tablename__ = 'tags'
-    
     id: Optional[int] = Field(default=None, primary_key=True)
     name: str = Field(unique=True, index=True, min_length=2, max_length=30, regex=r"^[a-z0-9-]+$")  # Unique tag name
 
@@ -113,7 +112,7 @@ class NoteCreate(BaseModel):
             )
         return value
     
-    author_email: EmailStr
+    author_email: EmailStr | None = None
     
     tags: list[str] = Field(default_factory=list, max_length=10)
 
@@ -134,12 +133,6 @@ class NoteCreate(BaseModel):
             cleaned.append(t)
         return cleaned
 
-    @model_validator(mode="after")
-    def work_notes_must_include_work_tag(self):
-        # This rule depends on both category and tags, so it belongs in a model validator.
-        if self.category == "work" and "work" not in self.tags:
-            raise ValueError("work notes must include the 'work' tag")
-        return self
     # Input model for creating/updating notes (tags as list of names)
 
 # API Output model
@@ -256,7 +249,9 @@ def list_notes(
     session: SessionDep,
     category: str = None,
     search: str = None,
-    tag: str = None
+    tag: str = None,
+    created_after: datetime = None,
+    created_before: datetime = None,
 ) -> list[NoteResponse]:
     """List notes with filters"""
     
@@ -279,6 +274,12 @@ def list_notes(
     if tag:
         tag_lower = tag.lower()
         statement = statement.join(Note.tags).where(Tag.name == tag_lower)
+
+    if created_after:
+        statement = statement.where(Note.created_at > created_after)
+
+    if created_before:
+        statement = statement.where(Note.created_at < created_before)
     
     # Execute query and return NoteResponse objects
     notes = session.exec(statement).all()
@@ -332,13 +333,13 @@ def get_notes_stats(session: SessionDep):
             tag_name = getattr(tag, "name", None) or str(tag)
             tag_counts[tag_name] = tag_counts.get(tag_name, 0) + 1
 
-    # Build top_tags list as list of {"tag": tag, "count": count}, sorted desc
+    # Build top_tags list as list of {"tag": tag, "count": count}, limited to top 5
     top_tags = [
         {"tag": tag, "count": count}
-        for tag, count in sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)
+        for tag, count in sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:5]
     ]
 
-    unique_tags_count = len(tag_counts)
+    unique_tags_count = len(session.exec(select(Tag)).all())
 
     return {
         "total_notes": len(notes),
@@ -348,7 +349,7 @@ def get_notes_stats(session: SessionDep):
     }
 
 
-@app.get("/notes/{note_id:int}")
+@app.get("/notes/{note_id}")
 def get_note(note_id: int, session: SessionDep) -> NoteResponse:
     """Get a specific note by ID"""
     statement = select(Note).where(Note.id == note_id)
@@ -364,7 +365,7 @@ def get_note(note_id: int, session: SessionDep) -> NoteResponse:
         created_at=note.created_at.isoformat()
     )
 
-@app.delete("/notes/{note_id:int}")
+@app.delete("/notes/{note_id}")
 def delete_note(note_id: int, session: SessionDep):
     """Delete a note by ID"""
     statement = select(Note).where(Note.id == note_id)
@@ -373,14 +374,7 @@ def delete_note(note_id: int, session: SessionDep):
         raise HTTPException(status_code=404, detail="Note not found")
     session.delete(note)
     session.commit()
-    return NoteResponse(
-        id=note.id,
-        title=note.title,
-        content=note.content,
-        category=note.category,
-        tags=[tag.name for tag in note.tags],
-        created_at=note.created_at.isoformat()
-    )    
+    return Response(status_code=204)
 
 
 
@@ -466,7 +460,7 @@ def list_tags(session: SessionDep) -> list[str]:
 
 
 # GET Endpoint um alle Notizen mit einem bestimmten Tag zu bekommen
-app.get("/tags/{tag_name}/notes")
+@app.get("/tags/{tag_name}/notes")
 def get_notes_by_tag(tag_name: str, session: SessionDep) -> list[NoteResponse]:
     """Get all notes with specific tag"""
     
@@ -481,7 +475,12 @@ def get_notes_by_tag(tag_name: str, session: SessionDep) -> list[NoteResponse]:
     # Return all notes associated with this tag
     return [
         NoteResponse(
-            ...
+            id=note.id,
+            title=note.title,
+            content=note.content,
+            category=note.category,
+            tags=[tag.name for tag in note.tags],
+            created_at=note.created_at.isoformat()
         )
         for note in tag.notes
     ]
@@ -581,5 +580,3 @@ def partial_update_note(note_id: int, note_update: NoteUpdate, session: SessionD
         tags=[tag.name for tag in note.tags],
         created_at=note.created_at.isoformat()
     )
-
-######
