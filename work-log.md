@@ -272,7 +272,11 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 1. ✅ What did I accomplish?
 
-
+- Ich habe mit `streamlit` ein erstes Frontend für die Notes-API erstellt und die Anwendung an mein FastAPI-Backend angebunden.
+- Im Frontend kann ich alle Notizen laden und als Liste mit aufklappbaren Karten anzeigen, sodass Titel, Inhalt, Kategorie, Tags und Zeitstempel direkt sichtbar sind.
+- Zusätzlich habe ich ein Formular zum Erstellen neuer Notizen eingebaut; die neuen Einträge werden über die API an das Backend geschickt und danach direkt in der Oberfläche nachgeladen.
+- Für die Bedienung habe ich eine kompakte Oberfläche mit Sidebar für die API-URL, Refresh-Logik und Zustandsverwaltung über `st.session_state` aufgebaut.
+- Über die Detailansicht pro Note lassen sich außerdem Notizen direkt aktualisieren oder löschen, was die Arbeit mit den Daten im Frontend deutlich angenehmer macht.
 
 
 
@@ -281,7 +285,11 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 2. 🚧 What challenges did I face?
 
-
+- Die Trennung zwischen Backend-API und Frontend-UI war anfangs ungewohnt, weil ich die Daten nicht mehr direkt im Code, sondern über HTTP-Requests verarbeiten musste.
+- Mit Streamlit selbst hatte ich durch das Business-Analytics-Modul zwar schon vorher Erfahrung, aber das Einbinden einer externen API war für mich in dem Zusammenhang neu.
+- Die JSON-Antworten der API mussten im Frontend sauber aufbereitet werden, vor allem bei Tags, leeren Feldern und Zeitstempeln.
+- Es war wichtig, die Verbindung zum Backend stabil zu halten und Fehler bei nicht erreichbarer API oder fehlgeschlagenen Requests sauber abzufangen.
+- Für die Notizansicht musste ich außerdem verstehen, wie ich mit `st.session_state` den geladenen Zustand so speichere, dass die Notizen nicht bei jedem Klick sofort verschwinden.
 
 
 
@@ -290,7 +298,11 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 3. 💡 How did I overcome them?
 
-
+- Da mir Streamlit schon aus dem Business-Analytics-Modul bekannt war, konnte ich mich schnell in die Oberfläche einarbeiten und den Fokus auf die neue API-Anbindung legen.
+- Ich habe die API-Aufrufe in eigene Hilfsfunktionen ausgelagert, damit das Frontend übersichtlich bleibt und die Requests zentral behandelt werden.
+- Mit `st.expander`, `st.columns` und Formularen habe ich die Notizen strukturiert dargestellt und die Oberfläche besser bedienbar gemacht.
+- Fehler bei den Requests fange ich mit Try-Except-Blöcken ab, damit das Frontend bei Problemen mit dem Backend nicht direkt abstürzt.
+- Durch die Nutzung von `st.session_state` kann ich geladene Notizen zwischenspeichern und nach Aktionen wie Erstellen, Bearbeiten oder Löschen gezielt neu laden.
 
 
 
