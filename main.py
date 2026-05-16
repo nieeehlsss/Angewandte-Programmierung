@@ -33,7 +33,12 @@ class Tag(SQLModel, table=True):
     __tablename__ = 'tags'
     
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(unique=True, index=True)  # Unique tag name
+    name: str = Field(unique=True, index=True, min_length=2, max_length=30, regex=r"^[a-z0-9-]+$")  # Unique tag name
+
+    @field_validator("name")
+    @classmethod
+    def normalize_name(cls, value: str) -> str:
+        return value.strip().lower()
     
     # Many-to-many relationship with Note (implicit link table)
     notes: list[Note] = Relationship(back_populates="tags", link_model=NoteTag)
