@@ -1,5 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends
-from pydantic import BaseModel, Field, field_validator, HttpUrl, PositiveInt, ConfigDict
+from pydantic import BaseModel, Field, field_validator, model_validator, HttpUrl, PositiveInt, ConfigDict
 from datetime import datetime, timezone
 import json
 from pathlib import Path
@@ -128,6 +128,13 @@ class NoteCreate(BaseModel):
             seen.add(t)
             cleaned.append(t)
         return cleaned
+
+    @model_validator(mode="after")
+    def work_notes_must_include_work_tag(self):
+        # This rule depends on both category and tags, so it belongs in a model validator.
+        if self.category == "work" and "work" not in self.tags:
+            raise ValueError("work notes must include the 'work' tag")
+        return self
     # Input model for creating/updating notes (tags as list of names)
 
 # API Output model
