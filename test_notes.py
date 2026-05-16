@@ -13,7 +13,7 @@ URL = "http://127.0.0.1:8000/"
 
 def test_create_50_notes():
     """Erzeugt und sendet 50 unterschiedliche Test-Notizen an die API."""
-    categories = [f"Category{n}" for n in range(1, 6)]
+    categories = ["work", "personal", "school", "ideas", "general"]
     success = 0
     for i in range(1, 51):
         cat = random.choice(categories)
@@ -61,7 +61,7 @@ def test_create_notes():
         payload = {
             "title": f"Test Note {i}",
             "content": f"This is test note number {i}.",
-            "category": "Test",
+            "category": "general",
             "tags": [f"tag{i}", f"tag{i+1}"]
         }
         response = requests.post(URL + "notes/", json=payload)
@@ -76,17 +76,16 @@ def test_post_creation():
     payload = {
         "title": "Test Note",
         "content": "This is a test note.",
-        "category": "Test",
+        "category": "general",
         "tags": ["tag1", "tag2"]
     }
-    # Post a single note and verify title in response
     response = requests.post(URL + "notes/", json=payload)
     if response.status_code == 201:
         print("POST /notes - Success")
     else:        
         print("POST /notes - Failed")
 
-    if response.json()["title"] == "Test Note":
+    if response.status_code == 201 and response.json().get("title") == "Test Note":
         print("POST /notes - TITLE MATCHES")
     else:
         print("POST /notes - TITLE DOES NOT MATCH")
@@ -125,7 +124,7 @@ def test_list_notes():
 
 def test_get_notes_by_category():
     # Notizen werden gefiltert über eine Kategorie abgefragt.
-    category = "Test"
+    category = "general"
     response = requests.get(URL + f"notes/category/{category}")
     if response.status_code == 200 and isinstance(response.json(), list):
         print(f"GET /notes/category/{category} - Success ({len(response.json())} notes)")
@@ -147,7 +146,7 @@ def test_create_get_delete_note():
     payload = {
         "title": "Temp Note",
         "content": "Temporary note for testing get/delete.",
-        "category": "Temp",
+        "category": "general",
         "tags": ["temp"]
     }
     post = requests.post(URL + "notes/", json=payload)

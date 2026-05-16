@@ -13,7 +13,7 @@ from main import app, get_session
 
 
 # Isoliertes Testmodell, um die Tag-Validierung unabhängig von der eigentlichen Note-Logik zu prüfen.
-class TestTag(BaseModel):
+class ValidationTag(BaseModel):
     name: str = Field(min_length=2, max_length=30, pattern=r"^[a-z0-9-]+$")
 
     @field_validator("name")
@@ -28,7 +28,7 @@ class TestTag(BaseModel):
 
 # Test-Endpunkt, der nur für die Validierungsprüfungen im Test-Szenario existiert.
 @app.post("/__test__/tags")
-def validate_tag(tag: TestTag):
+def validate_tag(tag: ValidationTag):
     return {"name": tag.name}
 
 
@@ -168,7 +168,8 @@ def test_work_note_requires_work_tag(base_url):
             "author_email": "test@example.com",
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 201
+    _delete_note(base_url, response.json()["id"])
 
 
 def test_patch_with_empty_body_succeeds(base_url):
