@@ -5,14 +5,18 @@ import json
 from pathlib import Path
 from typing import Optional, Annotated
 from sqlmodel import SQLModel, Field, Session, col, create_engine, Relationship, or_, select
-# Main application implementing a notes API backed by SQLModel (SQLite).
-# Contains models, DB setup, and FastAPI endpoints for CRUD and stats.
+
+"""Hauptanwendung der Notes-API.
+
+Die Datei enthält die Datenmodelle, die Datenbankanbindung und alle
+FastAPI-Endpunkte für CRUD, Filterung, Statistik und Tag-Verwaltung.
+"""
 
 class NoteTag(SQLModel, table=True):
     __tablename__ = "note_tag"
     note_id: Optional[int] = Field(default=None, foreign_key="notes.id", primary_key=True)
     tag_id: Optional[int] = Field(default=None, foreign_key="tags.id", primary_key=True)
-    # Association table for many-to-many Note <-> Tag relationship
+    # Verknüpfungstabelle für die Many-to-Many-Beziehung zwischen Notizen und Tags.
 
 
 class Note(SQLModel, table=True):
@@ -24,14 +28,14 @@ class Note(SQLModel, table=True):
     category: str
     created_at: datetime = Field(default_factory=datetime.now)
     
-    # Many-to-many relationship with Tag via NoteTag association table
+    # Beziehung zu Tags über die Verknüpfungstabelle NoteTag.
     tags: list["Tag"] = Relationship(back_populates="notes", link_model=NoteTag)
-    # `tags` will hold Tag objects linked through NoteTag
+    # In diesem Feld liegen später die zugehörigen Tag-Objekte.
 
 class Tag(SQLModel, table=True):
     __tablename__ = 'tags'
     id: Optional[int] = Field(default=None, primary_key=True)
-    name: str = Field(unique=True, index=True, min_length=2, max_length=30, regex=r"^[a-z0-9-]+$")  # Unique tag name
+    name: str = Field(unique=True, index=True, min_length=2, max_length=30, regex=r"^[a-z0-9-]+$")  # Eindeutiger Tag-Name
 
     @field_validator("name")
     @classmethod
@@ -41,24 +45,22 @@ class Tag(SQLModel, table=True):
             raise ValueError("tag name must be lowercase and trimmed")
         return normalized
     
-    # Many-to-many relationship with Note (implicit link table)
+    # Gegenrichtung der Many-to-Many-Beziehung zu den Notizen.
     notes: list[Note] = Relationship(back_populates="tags", link_model=NoteTag)
-    # `notes` will be populated with Note objects linked to this tag
+    # Hier werden alle Notizen gesammelt, die diesen Tag verwenden.
 
-# Create database engine
+# Datenbank-Engine für die SQLite-Datei initialisieren.
 engine = create_engine("sqlite:///notes.db")
 
-# Create DB tables if they do not exist yet: notes, tags, note_tag
+# Tabellen direkt beim Start anlegen, falls die Datenbank noch leer ist.
 SQLModel.metadata.create_all(engine)
 
 def get_session():
-    """Create a new database session for each request"""
+    """Erzeugt für jeden Request eine eigene Datenbanksession."""
     with Session(engine) as session:
         yield session
 
-# Dependency type alias for request handlers
-
-# Type alias for cleaner code
+# Typalias, damit die Endpunkte die Session kompakt per Depends nutzen können.
 SessionDep = Annotated[Session, Depends(get_session)]
 
 app = FastAPI(
@@ -69,39 +71,39 @@ app = FastAPI(
 
 @app.get("/")
 def root():
-    # Simple health/root endpoint
+    # Einfache Root-Route als schneller Funktionstest für die API.
     return {"message": "Hello, World!"}
 
 @app.get("/name/{name}")
 def greet_name(name: str):
-    # Echo endpoint with a path parameter
+    # Kleine Beispielroute, die einen Pfadparameter direkt zurückspiegelt.
     return {"message": f"Hello, {name}!"}
 
 @app.get("/calculate/{number}")
 def calculate(number: float):
     result = number * 2 + 5
-    # Example calculation endpoint returning localized message
+    # Beispielroute mit einfacher Berechnung, damit Typumwandlung sichtbar wird.
     return {"message": f"Der verrechnete Wert von {number} ist {result}"}
 
 
 ALLOWED_CATEGORIES = {"work", "personal", "school", "ideas", "general"}
 
-# API Input model
+# Eingabemodell für neue Notizen.
 class NoteCreate(BaseModel):
     model_config = ConfigDict(
-    str_strip_whitespace=True,   # auto-strip all str fields
-    extra="forbid",              # reject unknown fields    
+    str_strip_whitespace=True,   # Alle Textfelder werden automatisch getrimmt.
+    extra="forbid",              # Unbekannte Felder werden konsequent abgelehnt.
     )
     title: str = Field(
     min_length=3,
     max_length=100,
-    description="Short note title shown in lists"
+    description="Kurzer Titel, der in Listen angezeigt wird"
     )
     content: str = Field(min_length=1, max_length=10_000)
     category: str = Field(
     min_length=2, 
     max_length=30,
-    description="Lowercase category, e.g. work, personal, school"
+    description="Kategorie in Kleinbuchstaben, z. B. work, personal, school"
     )
     @field_validator("category")
     @classmethod
@@ -119,6 +121,7 @@ class NoteCreate(BaseModel):
     @field_validator("tags")
     @classmethod
     def clean_tags(cls, raw: list[str]) -> list[str]:
+        # Tags werden getrimmt, kleingeschrieben und doppelte Einträge entfernt.
         cleaned: list[str] = []
         seen: set[str] = set()
         for tag in raw:
@@ -128,14 +131,14 @@ class NoteCreate(BaseModel):
             if len(t) < 2:
                 raise ValueError("tags must be at least 2 characters long")
             if t in seen:
-                continue           # silently drop duplicates
+                continue           # Duplikate werden stillschweigend übersprungen.
             seen.add(t)
             cleaned.append(t)
         return cleaned
 
-    # Input model for creating/updating notes (tags as list of names)
+    # Modell für eingehende Daten beim Erstellen und Aktualisieren von Notizen.
 
-# API Output model
+# Ausgabemodell für Notizen, wie sie an Client und Frontend zurückgehen.
 class NoteResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -145,7 +148,7 @@ class NoteResponse(BaseModel):
     category: str
     tags: list[str]
     created_at: str
-    # Output model for API responses (serializes DB attributes)
+    # Dieses Modell serialisiert direkt die DB-Attribute in JSON-kompatible Daten.
 
 
 class FileNote(BaseModel):
@@ -159,23 +162,23 @@ class FileNote(BaseModel):
 NOTES_FILE = Path("data/notes.json")
 
 def load_notes():
-    """Load notes from JSON file and return notes list and next ID counter"""
+    """Lädt alte JSON-Daten aus der Datei und gibt Notizen plus nächste ID zurück."""
     notes_db = []
     note_id_counter = 1
 
-    # If a JSON file exists (legacy), load FileNote entries for file-backed endpoints
+    # Falls noch eine alte JSON-Datei existiert, werden deren Einträge weiterverwendet.
     if NOTES_FILE.exists():
         with open(NOTES_FILE, 'r') as f:
             data = json.load(f)
-            # Ensure older entries without `tags` don't break validation
+            # Ältere Einträge ohne Tags werden ergänzt, damit die Validierung nicht scheitert.
             for note_dict in data:
                 if 'tags' not in note_dict:
                     note_dict['tags'] = []
 
-            # Parse file-backed notes into FileNote Pydantic models
+            # Die geladenen Dictionaries werden in Pydantic-Objekte umgewandelt.
             notes_db = [FileNote(**note_dict) for note_dict in data]
 
-            # Set counter to max ID + 1
+            # Die nächste ID wird auf die höchste vorhandene ID plus eins gesetzt.
             if notes_db:
                 note_id_counter = max(note.id for note in notes_db) + 1
 
@@ -183,32 +186,32 @@ def load_notes():
 
 
 def save_notes(notes_db):
-    """Save notes to JSON file after each change"""
-    # Ensure data directory exists
+    """Speichert die aktuellen Notizen nach jeder Änderung wieder als JSON-Datei."""
+    # Das Zielverzeichnis wird bei Bedarf erzeugt.
     NOTES_FILE.parent.mkdir(parents=True, exist_ok=True)
 
     with open(NOTES_FILE, 'w') as f:
-        # Convert FileNote objects to dicts and write JSON
+        # Die Pydantic-Objekte werden vor dem Schreiben in Dictionaries umgewandelt.
         notes_data = [note.dict() for note in notes_db]
         json.dump(notes_data, f, indent=2)
 
 
 @app.post("/notes", status_code=201)
 def create_note(note: NoteCreate, session: SessionDep) -> NoteResponse:
-    """Create a new note in database"""
+    """Legt eine neue Notiz in der Datenbank an."""
     
-    # Create new Note DB object (will get an id after commit)
+    # Zuerst wird das DB-Objekt ohne ID erzeugt; SQLite vergibt die ID nach dem Commit.
     db_note = Note(
         title=note.title,
         content=note.content,
         category=note.category
     )
     
-    # Get or create tags (case-insensitive, deduplicated)
+    # Tags werden case-insensitiv geprüft und bei Bedarf neu angelegt.
     tag_objects = []
     seen_tags = set()
     
-    # Normalize and deduplicate tag names, find or create Tag rows
+    # Jedes Tag wird normalisiert, doppelte Werte werden übersprungen.
     for tag_name in note.tags:
         tag_name_lower = tag_name.lower().strip()
         if not tag_name_lower or tag_name_lower in seen_tags:
@@ -216,7 +219,7 @@ def create_note(note: NoteCreate, session: SessionDep) -> NoteResponse:
         
         seen_tags.add(tag_name_lower)
         
-        # Find existing tag or create new one
+        # Existiert der Tag schon, wird er wiederverwendet; sonst wird ein neuer Datensatz erstellt.
         statement = select(Tag).where(Tag.name == tag_name_lower)
         existing_tag = session.exec(statement).first()
         
@@ -227,14 +230,14 @@ def create_note(note: NoteCreate, session: SessionDep) -> NoteResponse:
             session.add(new_tag)
             tag_objects.append(new_tag)
     
-    # Attach Tag objects to the Note relationship
+    # Die Tags werden an die Beziehung der neuen Notiz gehängt.
     db_note.tags = tag_objects
     
     session.add(db_note)
     session.commit()
-    session.refresh(db_note)  # Get the generated ID and load relationships
+    session.refresh(db_note)  # ID und Relationen nach dem Commit aus der DB laden.
     
-    # Convert to response model
+    # Die Antwort wird explizit in das Ausgabemodell übersetzt.
     return NoteResponse(
         id=db_note.id,
         title=db_note.title,
@@ -253,12 +256,12 @@ def list_notes(
     created_after: datetime = None,
     created_before: datetime = None,
 ) -> list[NoteResponse]:
-    """List notes with filters"""
+    """Gibt alle Notizen zurück und unterstützt verschiedene Filterparameter."""
     
-    # Build base query for notes
+    # Ausgangspunkt ist immer die komplette Notiztabelle.
     statement = select(Note)
     
-    # Apply filters
+    # Danach werden die gewünschten Filter Schritt für Schritt ergänzt.
     if category:
         statement = statement.where(Note.category == category)
     
@@ -281,10 +284,10 @@ def list_notes(
     if created_before:
         statement = statement.where(Note.created_at < created_before)
     
-    # Execute query and return NoteResponse objects
+    # Die Datenbankabfrage wird ausgeführt und anschließend serialisiert zurückgegeben.
     notes = session.exec(statement).all()
     
-    # Convert DB Note objects to API response models
+    # DB-Objekte werden sauber in die API-Antwort umgewandelt.
     return [
         NoteResponse(
             id=n.id,
@@ -299,7 +302,7 @@ def list_notes(
 
 @app.get("/notes/category/{category}")
 def get_notes_by_category(category: str, session: SessionDep) -> list[NoteResponse]:
-    """Get all notes in a specific category"""
+    """Liefert alle Notizen aus einer bestimmten Kategorie."""
     statement = select(Note).where(Note.category == category)
     notes = session.exec(statement).all()
     return [
@@ -317,23 +320,23 @@ def get_notes_by_category(category: str, session: SessionDep) -> list[NoteRespon
 
 @app.get("/notes/stats")
 def get_notes_stats(session: SessionDep):
-    """Get statistics about notes (queries SQL database)."""
-    # Load all notes including their tags via relationships
+    """Ermittelt Statistikwerte über die gespeicherten Notizen."""
+    # Für die Auswertung werden alle Notizen samt ihrer Tags geladen.
     notes = session.exec(select(Note)).all()
 
-    # Count by category and tags
+    # Kategorien und Tags werden in Zählern gesammelt.
     categories: dict[str, int] = {}
     tag_counts: dict[str, int] = {}
 
-    # Aggregate category counts and tag counts
+    # Danach werden beide Strukturen über alle Notizen hinweg hochgezählt.
     for note in notes:
         categories[note.category] = categories.get(note.category, 0) + 1
         for tag in getattr(note, "tags", []) or []:
-            # tags are Tag objects in DB
+            # In der Datenbank liegen die Tags als Objekt-Relation vor.
             tag_name = getattr(tag, "name", None) or str(tag)
             tag_counts[tag_name] = tag_counts.get(tag_name, 0) + 1
 
-    # Build top_tags list as list of {"tag": tag, "count": count}, limited to top 5
+    # Die meistgenutzten Tags werden als Top-5-Liste zurückgegeben.
     top_tags = [
         {"tag": tag, "count": count}
         for tag, count in sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:5]
@@ -351,7 +354,7 @@ def get_notes_stats(session: SessionDep):
 
 @app.get("/notes/{note_id}")
 def get_note(note_id: int, session: SessionDep) -> NoteResponse:
-    """Get a specific note by ID"""
+    """Liefert eine einzelne Notiz anhand ihrer ID."""
     statement = select(Note).where(Note.id == note_id)
     note = session.exec(statement).first()
     if not note:
@@ -367,7 +370,7 @@ def get_note(note_id: int, session: SessionDep) -> NoteResponse:
 
 @app.delete("/notes/{note_id}")
 def delete_note(note_id: int, session: SessionDep):
-    """Delete a note by ID"""
+    """Löscht eine Notiz anhand ihrer ID."""
     statement = select(Note).where(Note.id == note_id)
     note = session.exec(statement).first()
     if not note:
@@ -376,24 +379,22 @@ def delete_note(note_id: int, session: SessionDep):
     session.commit()
     return Response(status_code=204)
 
+# Ergänzende Endpunkte aus späteren Kurstagen.
 
-
-# Day 3
-
-# PUT Endpoint um eine bestehende Note zu aktualisieren
+# PUT-Endpunkt, der eine vorhandene Notiz vollständig ersetzt.
 @app.put("/notes/{note_id}")
 def update_note(note_id: int, note_update: NoteCreate, session: SessionDep) -> NoteResponse:
-    """Update an existing note"""
+    """Aktualisiert eine bestehende Notiz vollständig."""
 
     statement = select(Note).where(Note.id == note_id)
     note = session.exec(statement).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    # Update note fields (handle tags specially)
+    # Die Eingabedaten werden aus dem Modell in ein editierbares Dict umgewandelt.
     update_data = note_update.dict(exclude_unset=True)
 
-    # Handle tags specially: convert tag names to Tag objects
+    # Tags werden separat behandelt, weil sie als Beziehung gespeichert sind.
     if "tags" in update_data:
         tag_objects = []
         seen = set()
@@ -413,7 +414,7 @@ def update_note(note_id: int, note_update: NoteCreate, session: SessionDep) -> N
 
         note.tags = tag_objects
 
-    # Update other simple fields
+    # Alle übrigen einfachen Felder werden direkt auf dem DB-Objekt gesetzt.
     for key, value in update_data.items():
         if key == "tags":
             continue
@@ -430,10 +431,10 @@ def update_note(note_id: int, note_update: NoteCreate, session: SessionDep) -> N
         created_at=note.created_at.isoformat()
     )
 
-# Delete Endpoint um eine Note zu löschen
+# Zweiter Lösch-Endpunkt aus dem späteren Unterrichtsstand.
 @app.delete("/notes/{note_id}", status_code=204)
 def delete_note(note_id: int, session: SessionDep):
-    """Delete a note"""
+    """Löscht eine Notiz und gibt bewusst keinen Body zurück."""
     statement = select(Note).where(Note.id == note_id)
     note = session.exec(statement).first()
     if not note:
@@ -449,30 +450,30 @@ def delete_note(note_id: int, session: SessionDep):
         created_at=note.created_at.isoformat()
     )
 
-# GET Endpoint um alle einzigartigen Tags aus allen Notizen zu bekommen
+# Alle eindeutigen Tags über einen eigenen Endpunkt abrufen.
 @app.get("/tags")
 def list_tags(session: SessionDep) -> list[str]:
-    """Get all unique tags from all notes"""
+    """Liefert alle eindeutigen Tag-Namen sortiert zurück."""
     statement = select(Tag)
     tags = session.exec(statement).all()
     
     return sorted([tag.name for tag in tags])
 
 
-# GET Endpoint um alle Notizen mit einem bestimmten Tag zu bekommen
+# Alle Notizen zu einem Tag abfragen.
 @app.get("/tags/{tag_name}/notes")
 def get_notes_by_tag(tag_name: str, session: SessionDep) -> list[NoteResponse]:
-    """Get all notes with specific tag"""
+    """Liefert alle Notizen, die einen bestimmten Tag besitzen."""
     
-    # Find the tag (case-insensitive)
+    # Der Tag wird case-insensitiv gesucht.
     tag_lower = tag_name.lower()
     statement = select(Tag).where(Tag.name == tag_lower)
     tag = session.exec(statement).first()
     
     if not tag:
-        return []  # No notes if tag doesn't exist
+        return []  # Existiert der Tag nicht, ist die Antwort einfach leer.
     
-    # Return all notes associated with this tag
+    # Anschließend werden alle verknüpften Notizen als API-Antwort gebaut.
     return [
         NoteResponse(
             id=note.id,
@@ -486,20 +487,20 @@ def get_notes_by_tag(tag_name: str, session: SessionDep) -> list[NoteResponse]:
     ]
 
 
-# GET Endpoint um alle einzigartigen Kategorien aus allen Notizen zu bekommen
+# Alle eindeutigen Kategorien über einen eigenen Endpunkt abrufen.
 @app.get("/categories")
 def list_categories(session: SessionDep) -> list[str]:
-    """Get all unique categories from all notes"""
+    """Liefert alle Kategorien sortiert und ohne Duplikate zurück."""
     statement = select(Note.category).distinct()
     categories = session.exec(statement).all()
     
     return sorted(categories)
 
 
-# GET Endpoint um alle Notizen einer bestimmten Kategorie zu bekommen
+# Alle Notizen einer Kategorie abfragen.
 @app.get("/categories/{category_name}/notes")
 def get_notes_by_category(category_name: str, session: SessionDep) -> list[NoteResponse]:
-    """Get all notes in a specific category"""
+    """Liefert alle Notizen einer bestimmten Kategorie."""
     statement = select(Note).where(Note.category == category_name)
     notes = session.exec(statement).all()
     
@@ -515,7 +516,7 @@ def get_notes_by_category(category_name: str, session: SessionDep) -> list[NoteR
         for note in notes
     ]
 
-# Add PATCH ENDPOINT um nur bestimmte Felder einer Note zu aktualisieren
+# PATCH-Modell für teilweise Updates.
 
 class NoteUpdate(BaseModel):
     model_config = ConfigDict(
@@ -529,20 +530,16 @@ class NoteUpdate(BaseModel):
 
 @app.patch("/notes/{note_id}")
 def partial_update_note(note_id: int, note_update: NoteUpdate, session: SessionDep) -> NoteResponse:
-    """
-    Partially update a note (only provided fields)
-    
-    Unlike PUT, PATCH only updates fields you provide
-    """
+    """Aktualisiert nur die Felder, die im Request tatsächlich übergeben wurden."""
     statement = select(Note).where(Note.id == note_id)
     note = session.exec(statement).first()
     if not note:
         raise HTTPException(status_code=404, detail="Note not found")
 
-    # Update only provided fields
+    # Nur explizit gesetzte Felder werden übernommen.
     update_data = note_update.model_dump(exclude_unset=True)
 
-    # Handle tags specially: convert tag names to Tag objects
+    # Tags werden wie beim PUT als echte Beziehungselemente verarbeitet.
     if "tags" in update_data:
         tag_objects = []
         seen = set()
@@ -562,7 +559,7 @@ def partial_update_note(note_id: int, note_update: NoteUpdate, session: SessionD
 
         note.tags = tag_objects
 
-    # Update other simple fields
+    # Alle übrigen Werte werden direkt auf das Notizobjekt geschrieben.
     for key, value in update_data.items():
         if key == "tags":
             continue

@@ -1,11 +1,11 @@
 # ============================================================================
-# DAY 4: Advanced API Features
+# TAG 4: Erweiterte API-Funktionen
 # ============================================================================
-# Goal: Write and run tests for our APIs
-#       - Use pytest to write unit tests for our API endpoints
-#       - Use FastAPI's TestClient to simulate API requests
-#       - Use Requests library to test API endpoints from outside the app
-# Topics: Testing FastAPI applications, pytest, TestClient, Requests library
+# Ziel: Tests für unsere APIs schreiben und ausführen
+#       - pytest für Unit-Tests auf den Endpunkten nutzen
+#       - FastAPI-TestClient zum Simulieren von Requests einsetzen
+#       - Requests als externe Testbibliothek für echte HTTP-Aufrufe verwenden
+# Themen: FastAPI testen, pytest, TestClient, Requests-Bibliothek
 # ============================================================================
 
 from fastapi import FastAPI, HTTPException
@@ -22,24 +22,24 @@ app = FastAPI(
 )
 
 # ----------------------------------------------------------------------------
-# PYDANTIC MODELS
+# PYDANTIC-MODELLE
 # ----------------------------------------------------------------------------
 
 class GreetingResponse(BaseModel):
-    """Response model for greeting endpoints
+    """Antwortmodell für die Begrüßungs-Endpunkte.
 
     Attributes:
-        message (str): The greeting message to be returned to the client
+        message (str): Die Begrüßungsnachricht, die an den Client zurückgeht.
     """
     message: str
 
 # ----------------------------------------------------------------------------
-# DAY 4: API ENDPOINTS FOR TESTING
+# TAG 4: API-ENDPUNKTE FÜR TESTS
 # ----------------------------------------------------------------------------
 
 @app.get("/", response_model=GreetingResponse)
 def read_root():
-    """Welcome endpoint - returns greeting message"""
+    """Begrüßungsroute, die eine einfache Erfolgsnachricht zurückgibt."""
     return {"message": "Hello World!"}
 
 
@@ -47,20 +47,17 @@ def read_root():
 
 @app.get("/greetings/{name}", response_model=GreetingResponse)
 def read_greeting(name: str):
-    """Personalized greeting endpoint - returns greeting message with name"""
+    """Personalisierte Begrüßung mit dem übergebenen Namen."""
     return {"message": f"Hello {name}!"}
 
 
 # ----------------------------------------------------------------------------
-# BUGGY ENDPOINT - For Teaching Purposes
+# FEHLERHAFTER ENDPOINT - nur für Lehrzwecke
 # ----------------------------------------------------------------------------
 
 @app.get("/is-adult/{age}")
 def check_adult(age: int):
-    """
-    Check if person is an adult (18 or older)
-    Example: /is-adult/17
-    """
+    """Prüft, ob eine Person volljährig ist. Beispiel: /is-adult/17"""
     if age < 0:
         raise HTTPException(status_code=400, detail="Negative Age Not Allowed")
     

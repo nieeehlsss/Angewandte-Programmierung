@@ -1,57 +1,133 @@
 # Note Taking API
 
-Kleines FastAPI-Projekt zur Verwaltung von Notizen mit Tags und Kategorien.
+Kleines FastAPI-Projekt zur Verwaltung von Notizen mit Tags und Kategorien, ergänzt um ein Streamlit-Frontend.
 
-Inhalt
-- `main.py` — FastAPI-Anwendung: Modelle, DB-Setup und alle Endpunkte (CRUD, Stats, Tags, Categories).
-- `api-test.py` — kleines Integrationstest-Skript, das Endpunkte gegen einen laufenden Server anspricht.
-- `notes.db` — SQLite-Datenbank (wird beim ersten Start erzeugt).
-- `data/notes.json` — optionales legacy JSON-Format (wird nur noch von einigen file-backed Endpunkten unterstützt).
+## Projektüberblick
 
-Voraussetzungen
-- Python 3.11+ (oder kompatibel)
-- Virtuelle Umgebung empfohlen
-- Abhängigkeiten siehe `pyproject.toml` / installiere mit Poetry oder pip
+Das Repository enthält:
 
-API Schnellübersicht
-- `GET /` — Health-Endpoint
-- `GET /name/{name}` — Begrüßung mit Name
-- `GET /calculate/{number}` — Beispiel-Rechnung
+- `main.py` — FastAPI-Anwendung mit Datenmodellen, SQLite-Setup und allen API-Endpunkten.
+- `frontend.py` — Streamlit-UI zum Anzeigen, Erstellen, Bearbeiten und Löschen von Notizen.
+- `test_main.py` — externe Integrationstests gegen einen laufenden Server.
+- `test_validation.py` — Validierungstests mit isolierter Testdatenbank.
+- `test_notes.py` — älteres manuelles Test-/Skriptsystem aus der Entwicklung.
+- `day4/` — frühere Übungsdateien und Testbeispiele aus dem Kurs.
+- `presentation/` — Präsentationsmaterial der einzelnen Kurstage.
+- `work-log.md` — persönliches Arbeitsprotokoll.
 
-Notes Endpoints (DB-backed)
-- `POST /notes` — Note erstellen; Body: `{title, content, category, tags: [..]}`
-- `GET /notes` — Alle Notizen (Filter: `category`, `search`, `tag` als Query-Parameter)
-- `GET /notes/{id}` — Einzelne Note
-- `PUT /notes/{id}` — Vollständiges Update (NoteCreate Payload)
-- `PATCH /notes/{id}` — Partielles Update (NoteUpdate — nur übergebene Felder werden aktualisiert)
-- `DELETE /notes/{id}` — Note löschen
+## Voraussetzungen
 
-Tags & Categories
-- `GET /tags` — Liste aller Tags
-- `GET /tags/{tag_name}/notes` — Notizen mit bestimmtem Tag
-- `GET /categories` — Liste aller Kategorien
-- `GET /categories/{category_name}/notes` — Notizen in einer Kategorie
+- Python 3.12 oder neuer
+- `uv` für Ausführung und Paketverwaltung empfohlen
+- Abhängigkeiten sind in `pyproject.toml` definiert
 
-Stats
-- `GET /notes/stats` — Aggregierte Statistik: `total_notes`, `by_category`, `top_tags` (Liste von `{tag, count}`)
-
-Testen
-- Nutze das Script `api-test.py` um Endpunkte automatisch zu testen. Beispiel:
+## Installation
 
 ```bash
-source .venv/bin/activate
-uvicorn main:app --reload &
-python api-test.py
+uv sync
 ```
 
-Hinweise zur Entwicklung
-- Das Projekt nutzt `SQLModel` (SQLAlchemy) für DB-Modelle. Die Many-to-Many-Beziehung zwischen `Note` und `Tag` wird über die Assoziationstabelle `NoteTag` modelliert.
-- Beim Umstellen von JSON-Storage auf `notes.db` können bestehende `notes.db`-Dateien inkonsistent sein — in diesem Fall `notes.db` löschen und neu erzeugen (siehe oben).
-- Beim Erstellen/Aktualisieren werden Tag-Namen normalisiert (lowercase, trim) und als `Tag`-Objekte erzeugt oder wiederverwendet.
+## Backend starten
 
-Fehlerbehebung
-- Wenn Mapper-/Relation-Fehler auftreten, prüfe, ob `NoteTag` mit `foreign_key`-Feldern vorhanden ist und ob `SQLModel.metadata.create_all(engine)` ausgeführt wurde.
-- Für Tests: wenn Antworten unerwartet sind, prüfe Server-Logs und ob die DB neu erstellt werden muss.
+```bash
+uv run fastapi dev main.py
+```
 
-Weiteres
-- `work-log.md` im Repo enthält Notizen zu den täglichen Tasks und Problemen während der Implementierung.
+Die API ist danach unter `http://127.0.0.1:8000` erreichbar.
+
+Swagger UI und ReDoc:
+
+- `http://127.0.0.1:8000/docs`
+- `http://127.0.0.1:8000/redoc`
+
+## Frontend starten
+
+```bash
+uv run streamlit run frontend.py
+```
+
+Im Frontend kann die API-Basis-URL in der Sidebar angepasst werden.
+
+## API-Endpunkte
+
+### Demo-Endpunkte
+
+- `GET /` — einfacher Health-/Start-Endpunkt
+- `GET /name/{name}` — Begrüßung mit Namen
+- `GET /calculate/{number}` — Beispielrechnung
+
+### Notizen
+
+- `POST /notes` — neue Notiz erstellen
+- `GET /notes` — alle Notizen auflisten
+- `GET /notes/{note_id}` — einzelne Notiz laden
+- `PUT /notes/{note_id}` — komplette Notiz aktualisieren
+- `PATCH /notes/{note_id}` — einzelne Felder einer Notiz aktualisieren
+- `DELETE /notes/{note_id}` — Notiz löschen
+- `GET /notes/stats` — Statistiken zu Notizen und Tags
+
+### Filter
+
+`GET /notes` unterstützt diese Query-Parameter:
+
+- `category`
+- `search`
+- `tag`
+- `created_after`
+- `created_before`
+
+Zusätzlich gibt es:
+
+- `GET /notes/category/{category}` — Notizen einer Kategorie
+- `GET /tags` — alle Tags
+- `GET /tags/{tag_name}/notes` — Notizen zu einem Tag
+- `GET /categories` — alle Kategorien
+- `GET /categories/{category_name}/notes` — Notizen einer Kategorie
+
+## Datenmodell und Validierung
+
+Das Projekt nutzt `SQLModel` mit SQLite. Die Beziehung zwischen Notizen und Tags ist Many-to-Many und wird über die Zwischentabelle `NoteTag` abgebildet.
+
+Wichtige Regeln aus dem aktuellen Code:
+
+- Titel sind Pflicht und müssen eine Mindestlänge haben.
+- Content ist Pflicht.
+- Kategorien sind auf die erlaubten Werte `work`, `personal`, `school`, `ideas` und `general` beschränkt.
+- Tags werden beim Erstellen und Aktualisieren normalisiert:
+	- Trim von Leerzeichen
+	- Lowercase
+	- Dubletten werden entfernt
+- Tags müssen dem Format `[a-z0-9-]+` entsprechen und zwischen 2 und 30 Zeichen lang sein.
+- Zusätzliche unbekannte Felder im Create-Request werden abgewiesen.
+- `author_email` ist optional.
+
+Die Datenbank wird beim Start automatisch angelegt.
+
+## Tests
+
+### Integrationstests gegen laufenden Server
+
+```bash
+uv run pytest test_main.py
+```
+
+Dieser Testlauf erwartet, dass der Server bereits unter `http://127.0.0.1:8000` läuft.
+
+### Validierungstests mit isolierter Datenbank
+
+```bash
+uv run pytest test_validation.py
+```
+
+### Manuelles Testskript
+
+`test_notes.py` ist ein älteres, manuelles Skript für einfache Requests. Es ist eher als Entwicklungshelfer gedacht als als vollständige Test-Suite.
+
+## Projekt zurücksetzen
+
+Wenn du die Datenbank neu starten möchtest, lösche einfach die lokale Datenbankdatei. Beim nächsten Start wird sie automatisch neu erzeugt.
+
+## Hinweise
+
+- Die API ist für den Kurs als Lernprojekt aufgebaut und enthält sowohl aktuelle als auch ältere Übungsdateien.
+- Die beste erste Anlaufstelle für die Endpunkte ist die Swagger-Dokumentation unter `/docs`.

@@ -3,8 +3,8 @@ import random
 
 URL = "http://127.0.0.1:8000/"
 
-# Small integration test script for the Note Taking API.
-# Each function posts/gets against the running FastAPI server.
+# Kleines Integrationsskript für die Note-Taking-API.
+# Die Funktionen schicken echte HTTP-Requests an den laufenden FastAPI-Server.
 
 
 '''
@@ -12,7 +12,7 @@ URL = "http://127.0.0.1:8000/"
 '''
 
 def test_create_50_notes():
-    """Generate and POST 50 distinct notes to the API."""
+    """Erzeugt und sendet 50 unterschiedliche Test-Notizen an die API."""
     categories = [f"Category{n}" for n in range(1, 6)]
     success = 0
     for i in range(1, 51):
@@ -33,7 +33,7 @@ def test_create_50_notes():
 
 
 def test_get_root():
-    """Check root endpoint returns 200."""
+    """Prüft, ob die Root-Route mit HTTP 200 antwortet."""
     response = requests.get(URL)
     response.status_code == 200
     if response.status_code == 200:
@@ -43,10 +43,11 @@ def test_get_root():
 
 
 """
-TESTS DER EINZELNEN ENDPOINTS
+TESTS DER EINZELNEN ENDPUNKTE
 """
 
 def test_get_root():
+    # Doppelte Root-Prüfung, die den manuellen Testablauf aus dem Unterricht nachbildet.
     response = requests.get(URL)
     response.status_code == 200
     if response.status_code == 200:
@@ -55,7 +56,7 @@ def test_get_root():
         print("GET / - Failed")
 
 def test_create_notes():
-    # Create a few sample notes with fixed payloads
+    # Einige Beispiel-Notizen werden mit festem Payload erstellt.
     for i in range(5):
         payload = {
             "title": f"Test Note {i}",
@@ -71,6 +72,7 @@ def test_create_notes():
 
 
 def test_post_creation():
+    # Einzelne Notiz anlegen und anschließend den Rückgabewert prüfen.
     payload = {
         "title": "Test Note",
         "content": "This is a test note.",
@@ -92,7 +94,7 @@ def test_post_creation():
 
 
 def test_greet_name():
-    # Test the name greeting endpoint
+    # Prüft den Namens-Endpunkt auf korrekte Begrüßung.
     name = "Alice"
     response = requests.get(URL + f"name/{name}")
     if response.status_code == 200 and response.json().get("message") == f"Hello, {name}!":
@@ -102,7 +104,7 @@ def test_greet_name():
 
 
 def test_calculate():
-    # Test the calculation endpoint and check the expected value appears
+    # Der Rechen-Endpunkt wird gegen einen erwarteten Wert getestet.
     number = 3.5
     expected = number * 2 + 5
     response = requests.get(URL + f"calculate/{number}")
@@ -113,7 +115,7 @@ def test_calculate():
 
 
 def test_list_notes():
-    # Retrieve list of notes (DB-backed)
+    # Die Notizliste wird aus der API geladen und auf Listenform geprüft.
     response = requests.get(URL + "notes/")
     if response.status_code == 200 and isinstance(response.json(), list):
         print(f"GET /notes - Success ({len(response.json())} notes)")
@@ -122,7 +124,7 @@ def test_list_notes():
 
 
 def test_get_notes_by_category():
-    # Retrieve notes filtered by category
+    # Notizen werden gefiltert über eine Kategorie abgefragt.
     category = "Test"
     response = requests.get(URL + f"notes/category/{category}")
     if response.status_code == 200 and isinstance(response.json(), list):
@@ -132,7 +134,7 @@ def test_get_notes_by_category():
 
 
 def test_get_notes_stats():
-    # Request aggregated stats (total, by_category, top_tags)
+    # Die Statistik-Ressource liefert aggregierte Werte wie Gesamtzahl und Tags.
     response = requests.get(URL + "notes/stats")
     if response.status_code == 200 and "total_notes" in response.json():
         print("GET /notes/stats - Success")
@@ -141,7 +143,7 @@ def test_get_notes_stats():
 
 
 def test_create_get_delete_note():
-    # Create a temp note, then GET it and DELETE it to verify lifecycle
+    # Lebenszyklus-Test: anlegen, abrufen und anschließend wieder löschen.
     payload = {
         "title": "Temp Note",
         "content": "Temporary note for testing get/delete.",
@@ -173,7 +175,7 @@ def test_create_get_delete_note():
 
 
 def test_query_parameters():
-    # Test query parameter endpoint that filters a static name list
+    # Der Query-Parameter-Endpunkt wird mit Beispielwerten aufgerufen.
     params = {"param1": "A", "param2": 2}
     response = requests.get(URL + "queryparameters", params=params)
     if response.status_code == 200 and "namen" in response.json():
@@ -183,19 +185,18 @@ def test_query_parameters():
 
 
 """
-MAIN DATEI, UM ALLE TESTS AUSZUFÜHREN
+HAUPTEINSTIEG, UM DIE TESTS MANUELL AUSZUFÜHREN
 """
 
 if __name__ == "__main__":
+    # Hier können einzelne Tests manuell ein- oder auskommentiert werden.
+    test_list_notes()
     # test_get_root()
     # test_greet_name()
     # test_calculate()
     # test_create_get_delete_note()
-    test_list_notes()
     # test_get_notes_by_category()
     # test_get_notes_stats()
     # test_query_parameters()
-    # create a few notes with the small helper
-    #test_create_notes()
-    # then create 50 more (optional heavy load)
-    #test_create_50_notes()
+    # test_create_notes()
+    # test_create_50_notes()

@@ -12,30 +12,35 @@ from sqlmodel import SQLModel, Session, create_engine
 from main import app, get_session
 
 
+# Isoliertes Testmodell, um die Tag-Validierung unabhängig von der eigentlichen Note-Logik zu prüfen.
 class TestTag(BaseModel):
     name: str = Field(min_length=2, max_length=30, pattern=r"^[a-z0-9-]+$")
 
     @field_validator("name")
     @classmethod
     def normalize_name(cls, value: str) -> str:
+        # Tags sollen konsequent getrimmt und kleingeschrieben sein.
         normalized = value.strip().lower()
         if value != normalized:
             raise ValueError("tag name must be lowercase and trimmed")
         return normalized
 
 
+# Test-Endpunkt, der nur für die Validierungsprüfungen im Test-Szenario existiert.
 @app.post("/__test__/tags")
 def validate_tag(tag: TestTag):
     return {"name": tag.name}
 
 
 def _free_port() -> int:
+    """Reserviert einen freien Port für den temporären Testserver."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
 
 
 def _wait_until_ready(base_url: str, timeout: float = 5.0) -> None:
+    """Wartet, bis der Testserver erreichbar ist, bevor die Requests starten."""
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
@@ -50,11 +55,13 @@ def _wait_until_ready(base_url: str, timeout: float = 5.0) -> None:
 
 @pytest.fixture(scope="module")
 def base_url(tmp_path_factory):
+    # Für diese Tests wird eine eigene SQLite-Datei und eine eigene App-Instanz verwendet.
     db_dir = tmp_path_factory.mktemp("validation-db")
     engine = create_engine(f"sqlite:///{db_dir / 'test.db'}")
     SQLModel.metadata.create_all(engine)
 
     def override_get_session():
+        # Die normale Session-Dependency wird für den Testlauf auf die temporäre DB umgebogen.
         with Session(engine) as session:
             yield session
 
@@ -78,12 +85,14 @@ def base_url(tmp_path_factory):
 
 
 def _create_note(base_url: str, payload: dict) -> dict:
+    """Hilfsfunktion zum Anlegen einer Notiz im Testserver."""
     response = requests.post(f"{base_url}/notes", json=payload)
     assert response.status_code == 201
     return response.json()
 
 
 def _delete_note(base_url: str, note_id: int) -> None:
+    """Hilfsfunktion zum sauberen Aufräumen nach einem Test."""
     response = requests.delete(f"{base_url}/notes/{note_id}")
     assert response.status_code in (200, 204)
 

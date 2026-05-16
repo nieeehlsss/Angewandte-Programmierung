@@ -1,10 +1,9 @@
-"""
-Pytest test suite for the Day 3 reference implementation.
+"""Pytest-Test-Suite für die Referenzimplementierung aus Day 3.
 
-Run the FastAPI server first:
+Vor dem Ausführen muss der FastAPI-Server laufen:
     uv run fastapi dev main.py
 
-Then run the tests:
+Danach können die Tests gestartet werden mit:
     uv run pytest test_notes_api.py -v
 """
 
@@ -17,12 +16,12 @@ BASE_URL = "http://127.0.0.1:8000"
 
 
 # ---------------------------------------------------------------------------
-# Fixtures
+# Fixtures und Testdaten
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(scope="session", autouse=True)
 def _require_server():
-    """Skip the entire suite if the API is not reachable."""
+    """Überspringt die komplette Suite, wenn die API nicht erreichbar ist."""
     try:
         requests.get(f"{BASE_URL}/", timeout=2)
     except requests.exceptions.RequestException as exc:
@@ -44,7 +43,7 @@ def _create_note(**overrides) -> dict:
 
 @pytest.fixture
 def note() -> dict:
-    """A fresh note created via the API."""
+    """Erzeugt eine frische Notiz über die API."""
     return _create_note()
 
 
@@ -55,7 +54,7 @@ def note_id(note) -> int:
 
 @pytest.fixture
 def seeded_notes() -> list[dict]:
-    """Create a small varied set of notes to support filtering/stats tests."""
+    """Erzeugt eine kleine, gemischte Menge an Notizen für Filter- und Statistiktests."""
     seeds = [
         {
             "title": "Team Meeting",
@@ -92,7 +91,7 @@ def seeded_notes() -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Root
+# Root-Endpunkt
 # ---------------------------------------------------------------------------
 
 def test_root_returns_metadata():
@@ -102,7 +101,7 @@ def test_root_returns_metadata():
 
 
 # ---------------------------------------------------------------------------
-# Create / Read
+# Erstellen / Lesen
 # ---------------------------------------------------------------------------
 
 def test_create_note_returns_201_and_payload():
@@ -125,7 +124,7 @@ def test_create_note_returns_201_and_payload():
 
 
 def test_create_note_normalizes_tags():
-    """Tags should be lowercased and deduplicated."""
+    """Tags sollen kleingeschrieben und Duplikate entfernt werden."""
     response = requests.post(
         f"{BASE_URL}/notes",
         json={
@@ -160,7 +159,7 @@ def test_get_missing_note_returns_404():
 
 
 # ---------------------------------------------------------------------------
-# Task 1: Combined filters
+# Aufgabe 1: Kombinierte Filter
 # ---------------------------------------------------------------------------
 
 def test_filter_by_category(seeded_notes):
@@ -205,7 +204,7 @@ def test_combined_filters(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# Task 2: Statistics
+# Aufgabe 2: Statistiken
 # ---------------------------------------------------------------------------
 
 def test_statistics_structure(seeded_notes):
@@ -226,7 +225,7 @@ def test_statistics_structure(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# Task 3: Categories resource
+# Aufgabe 3: Kategorien-Ressource
 # ---------------------------------------------------------------------------
 
 def test_list_categories(seeded_notes):
@@ -247,7 +246,7 @@ def test_notes_by_category(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# Task 4: PATCH (partial update)
+# Aufgabe 4: PATCH (teilweises Update)
 # ---------------------------------------------------------------------------
 
 def test_patch_updates_only_provided_fields(note):
@@ -272,7 +271,7 @@ def test_patch_missing_note_returns_404():
 
 
 # ---------------------------------------------------------------------------
-# Task 5: Date-based filtering
+# Aufgabe 5: Datumsbasierte Filterung
 # ---------------------------------------------------------------------------
 
 def test_filter_created_after(seeded_notes):
@@ -305,7 +304,7 @@ def test_filter_date_range(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# Tags resource
+# Tags-Ressource
 # ---------------------------------------------------------------------------
 
 def test_list_tags(seeded_notes):
@@ -326,7 +325,7 @@ def test_notes_by_tag(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# PUT (full update)
+# PUT (vollständiges Update)
 # ---------------------------------------------------------------------------
 
 def test_put_replaces_all_fields(note_id):
@@ -376,7 +375,7 @@ def test_delete_missing_note_returns_404():
 
 
 def test_delete_is_idempotent_after_first_call(note_id):
-    """A second DELETE on the same id returns 404, never succeeds twice."""
+    """Ein zweiter DELETE-Aufruf auf dieselbe ID liefert 404 und löscht nichts mehr."""
     first = requests.delete(f"{BASE_URL}/notes/{note_id}")
     assert first.status_code == 204
     second = requests.delete(f"{BASE_URL}/notes/{note_id}")
@@ -384,17 +383,17 @@ def test_delete_is_idempotent_after_first_call(note_id):
 
 
 # ---------------------------------------------------------------------------
-# Validation: 422 on bad payloads
+# Validierung: 422 bei fehlerhaften Payloads
 # ---------------------------------------------------------------------------
 
 @pytest.mark.parametrize(
     "payload",
     [
-        {},  # everything missing
-        {"title": "only title"},  # missing content + category
-        {"title": "x", "content": "x"},  # missing category
+        {},  # alles fehlt
+        {"title": "only title"},  # content und category fehlen
+        {"title": "x", "content": "x"},  # category fehlt
         {"title": "x", "content": "x", "category": "x", "tags": "not-a-list"},
-        {"title": 123, "content": "x", "category": "x"},  # wrong type
+        {"title": 123, "content": "x", "category": "x"},  # falscher Typ
     ],
 )
 def test_create_note_validation_errors(payload):
@@ -420,7 +419,7 @@ def test_invalid_created_before_returns_422(bad_date):
 
 
 # ---------------------------------------------------------------------------
-# Tag normalization (deeper)
+# Tiefergehende Tag-Normalisierung
 # ---------------------------------------------------------------------------
 
 def test_tag_whitespace_is_stripped():
@@ -561,7 +560,7 @@ def test_search_is_case_insensitive(seeded_notes):
 
 
 def test_search_matches_content(seeded_notes):
-    """Search should also look in content, not just titles."""
+    """Die Suche soll nicht nur Titel, sondern auch Inhalte prüfen."""
     response = requests.get(f"{BASE_URL}/notes", params={"search": "chapters"})
     assert response.status_code == 200
     assert len(response.json()) > 0
@@ -610,7 +609,7 @@ def test_filter_created_before_in_past_returns_empty(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# Statistics deeper checks
+# Vertiefte Statistikprüfungen
 # ---------------------------------------------------------------------------
 
 def test_statistics_top_tags_shape(seeded_notes):
@@ -648,11 +647,11 @@ def test_statistics_by_category_sums_to_total(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# Resource navigation
+# Navigation zwischen Ressourcen
 # ---------------------------------------------------------------------------
 
 def test_unknown_tag_resource_returns_empty_list():
-    """Requesting notes for a non-existent tag should return [], not 404."""
+    """Für einen unbekannten Tag soll eine leere Liste zurückkommen, nicht 404."""
     response = requests.get(f"{BASE_URL}/tags/no-such-tag-xyz/notes")
     assert response.status_code == 200
     assert response.json() == []
@@ -684,28 +683,28 @@ def test_tags_endpoint_is_sorted_and_unique(seeded_notes):
 
 
 # ---------------------------------------------------------------------------
-# End-to-end flows
+# End-to-End-Abläufe
 # ---------------------------------------------------------------------------
 
 def test_full_crud_lifecycle():
-    """Create → read → patch → put → delete → verify gone."""
+    """Erstellen → lesen → patchen → putten → löschen → prüfen, dass alles weg ist."""
     created = _create_note(
         title="Lifecycle", content="initial", category="work", tags=["ab"]
     )
     nid = created["id"]
 
-    # Read
+    # Lesen
     got = requests.get(f"{BASE_URL}/notes/{nid}").json()
     assert got["title"] == "Lifecycle"
 
-    # Patch
+    # Teilaktualisierung
     patched = requests.patch(
         f"{BASE_URL}/notes/{nid}", json={"content": "patched"}
     ).json()
     assert patched["content"] == "patched"
     assert patched["title"] == "Lifecycle"
 
-    # Put
+    # Vollständiges Update
     put = requests.put(
         f"{BASE_URL}/notes/{nid}",
         json={
@@ -719,7 +718,7 @@ def test_full_crud_lifecycle():
     assert put["category"] == "personal"
     assert put["tags"] == ["bput"]
 
-    # Delete
+    # Löschen
     assert requests.delete(f"{BASE_URL}/notes/{nid}").status_code == 204
     assert requests.get(f"{BASE_URL}/notes/{nid}").status_code == 404
 
@@ -739,15 +738,15 @@ def test_note_appears_in_tag_and_category_resources():
 
 
 # ===========================================================================
-# Performance / smoke-load tests
+# Performance- und Smoke-Tests
 # ---------------------------------------------------------------------------
-# Lightweight latency checks. Thresholds are intentionally loose so the suite
-# does not flake on slow CI runners or student laptops; they mostly guard
-# against accidental O(n^2) regressions and obvious slowdowns.
+# Diese Latenzprüfungen sind bewusst großzügig, damit sie auf langsamen
+# Rechnern oder in CI nicht unnötig fehlschlagen. Sie sollen vor allem grobe
+# Performance-Regressionen und offensichtliche Langsamkeit erkennen.
 #
-# Run only these tests with:
+# Nur diese Tests ausführen mit:
 #     uv run pytest test_notes_api.py -v -m performance
-# Skip them with:
+# Alle Performance-Tests überspringen mit:
 #     uv run pytest test_notes_api.py -v -m "not performance"
 # ===========================================================================
 
@@ -755,14 +754,14 @@ def test_note_appears_in_tag_and_category_resources():
 # import statistics
 
 
-# # Loose thresholds (seconds). Tune down if you want stricter SLAs.
+# # Großzügige Grenzwerte in Sekunden. Für strengere Tests kann man sie senken.
 # PERF_P95_BUDGET = 0.5         # 500 ms p95 for cheap point lookups / writes
 # PERF_MEAN_BUDGET = 0.2        # 200 ms mean for cheap point lookups / writes
 # PERF_SCAN_P95_BUDGET = 2.0    # 2 s p95 for endpoints that scan the whole table
 
 
 # def _percentile(values: list[float], pct: float) -> float:
-#     """Simple nearest-rank percentile (no numpy dependency)."""
+#     """Einfaches Nearest-Rank-Perzentil ohne NumPy-Abhängigkeit."""
 #     if not values:
 #         return 0.0
 #     ordered = sorted(values)
@@ -771,13 +770,13 @@ def test_note_appears_in_tag_and_category_resources():
 
 
 # def _measure(fn, n: int) -> list[float]:
-#     """Call fn() n times and return per-call durations in seconds."""
+#     """Ruft fn() n-mal auf und gibt die Laufzeiten in Sekunden zurück."""
 #     durations = []
 #     for _ in range(n):
 #         start = time.perf_counter()
 #         response = fn()
 #         durations.append(time.perf_counter() - start)
-#         # Fail fast if the endpoint is broken — perf of a 500 is meaningless.
+#         # Bei einem kaputten Endpunkt sofort abbrechen; Performance ist dann irrelevant.
 #         assert response.status_code < 400, response.text
 #     return durations
 
@@ -803,7 +802,7 @@ def test_note_appears_in_tag_and_category_resources():
 
 # @pytest.fixture(scope="module")
 # def perf_dataset() -> list[dict]:
-#     """Seed ~50 notes so list/filter/stats endpoints have something to chew on."""
+#     """Erzeugt rund 50 Notizen, damit Listen-, Filter- und Statistik-Endpunkte Daten haben."""
 #     categories = ["work", "personal", "school", "ideas"]
 #     tag_pool = ["urgent", "later", "review", "todo", "draft", "perf"]
 #     created = []
@@ -831,7 +830,7 @@ def test_note_appears_in_tag_and_category_resources():
 # def test_perf_list_notes(perf_dataset):
 #     durations = _measure(lambda: requests.get(f"{BASE_URL}/notes"), n=30)
 #     stats = _report("GET /notes", durations)
-#     # Full table scan + serialization — looser budget.
+#     # Vollständiger Tabellenscan plus Serialisierung; deshalb etwas großzügiger.
 #     assert stats["p95_ms"] < PERF_SCAN_P95_BUDGET * 1000
 
 
@@ -877,7 +876,7 @@ def test_note_appears_in_tag_and_category_resources():
 # def test_perf_stats_endpoint(perf_dataset):
 #     durations = _measure(lambda: requests.get(f"{BASE_URL}/notes/stats"), n=30)
 #     stats = _report("GET /notes/stats", durations)
-#     # Aggregates over all notes — looser budget.
+#     # Aggregation über alle Notizen; daher ebenfalls ein großzügigerer Grenzwert.
 #     assert stats["p95_ms"] < PERF_SCAN_P95_BUDGET * 1000
 
 
@@ -899,7 +898,7 @@ def test_note_appears_in_tag_and_category_resources():
 
 # @pytest.mark.performance
 # def test_perf_throughput_sequential_creates():
-#     """Sanity check throughput: should comfortably exceed 10 req/s sequentially."""
+#     """Plausibilitätscheck für den Durchsatz: sollte locker über 10 req/s liegen."""
 #     n = 30
 #     start = time.perf_counter()
 #     for i in range(n):
