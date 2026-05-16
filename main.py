@@ -121,6 +121,8 @@ class NoteCreate(BaseModel):
             t = tag.strip().lower()
             if not t:
                 raise ValueError("tags must not be empty strings")
+            if len(t) < 2:
+                raise ValueError("tags must be at least 2 characters long")
             if t in seen:
                 continue           # silently drop duplicates
             seen.add(t)
