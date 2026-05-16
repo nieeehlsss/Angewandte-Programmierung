@@ -231,7 +231,11 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 1. ✅ What did I accomplish?
 
-
+- Ich habe die komplette Vorlesungs-Test‑Suite integriert und erfolgreich ausgeführt, nachdem ich die API‑Logik angepasst habe.
+- Die Endpunkte für `PUT`, `PATCH` und `DELETE` wurden überarbeitet, die Tag- und Kategorie-Ressourcen (`/tags/{tag}/notes`, `/categories/{cat}/notes`) finalisiert und die Navigation zwischen Ressourcen verbessert.
+- Die Suche ist jetzt case‑insensitive umgesetzt (Datenbank‑unabhängig), sodass `search`-Filter zuverlässig Treffer liefern.
+- Technische Details: `author_email` wurde optional gemacht (`EmailStr | None`), `NoteUpdate` präzise implementiert, und `NoteResponse` mit `from_attributes=True` konfiguriert; außerdem wurden die Datum‑Filter (`created_after`/`created_before`) als `datetime` ergänzt.
+- Ich habe geprüft, dass die neuen Endpunkte und Validierungen in der `/docs` (Swagger UI) korrekt erscheinen.
 
 
 
@@ -240,7 +244,10 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 2. 🚧 What challenges did I face?
 
-
+- Die Rekonstruktion mancher Implementierungsschritte war schwierig, da Vorlesungsaufnahmen/Transkripte nicht verfügbar waren.
+- Mein ursprünglicher Cross‑Field‑Validator (z. B. Kategorie `work` → zwingendes `work`‑Tag) erwies sich als zu strikt und führte bei Standard-Testdaten zu vielen `422`-Errors.
+- SQLite verhielt sich bei bestimmten SQL-Operationen (z. B. lower()/LIKE) etwas anders, was die Umsetzung einer robusten case‑insensitive Suche erschwerte.
+- Statische Pfade wie `/notes/stats` kollidierten mit dynamischen Routen `/notes/{note_id}` und führten zu falschen Zuordnungen.
 
 
 
@@ -249,7 +256,10 @@ _Explain how you overcame the challenges or what help you needed._
 
 #### 3. 💡 How did I overcome them?
 
-
+- Ich habe die Logik so flexibilisiert, dass die Tests die Standardfälle prüfen können, ohne die Datenintegrität aufzuweichen.
+- Für die case‑insensitive Suche nutzte ich `.contains()` / ilike-gestützte Abfragen und Normalisierung, damit die Suche zuverlässig über SQLite und andere DBs funktioniert.
+- Die Reihenfolge der Routen in `main.py` wurde korrigiert, sodass statische Pfade vor variablen Pfad-Parametern geprüft werden — Routingkonflikte sind damit behoben.
+- Schrittweise Analyse der Pytest-Fehlermeldungen half, die Probleme priorisiert zu lösen und die API in kleinen, verifizierbaren Schritten anzupassen.
 
 
 
@@ -316,34 +326,7 @@ _Explain how you overcame the challenges or what help you needed._
 
 ---
 
-### Day 9
 
-#### 1. ✅ What did I accomplish?
-
-
-
-
-
-
----
-
-#### 2. 🚧 What challenges did I face?
-
-
-
-
-
-
----
-
-#### 3. 💡 How did I overcome them?
-
-
-
-
-
-
----
 
 
 # 🎉 Congratulations! You did it! 🎓✨
